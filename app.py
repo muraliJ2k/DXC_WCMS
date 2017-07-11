@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 
 from flask import Flask
@@ -23,18 +22,50 @@ def webhook():
         #get the fulfilnment request
         fulfilmentrequest = request.data
         fulfilmentrequest = json.loads(fulfilmentrequest.decode('UTF-8'))
-        client = Client('https://apiaiwebhookpassthough.herokuapp.com/static/content/EntitlementService.xml')    
-        requesttype = client.get_element('ns2:EntitlementRequest')
-        entitlementrequest = requesttype(BusinessOrgID = 1, ProductTypeCode = 'P', RequestedByUserID = '26may2017', SerialNumber = fulfilmentrequest['result']['parameters']['slno'], SymptomIDList = '0707')
-        response = client.service.Entitle(request = entitlementrequest)
-        warrantyexpirydate = response['Entitlement']['WarrantyExpiryDate']   
-        if datetime.now() < warrantyexpirydate:
-            chatresponse['displayText'] = "The phone is under warranty"
-            chatresponse['speech'] = "Your phone is under warranty"
-        else:
-            chatresponse['displayText'] = "The phone is not under warranty"
-            chatresponse['speech'] = "Your phone is not under warranty"
-    except:
+        intentname = fulfilmentrequest['result']['metadata']['intentName']
+        if intentname == 'warranty_check':
+            client = Client('https://apiaiwebhookpassthough.herokuapp.com/static/content/EntitlementService.xml')    
+            requesttype = client.get_element('ns2:EntitlementRequest')
+            entitlementrequest = requesttype(BusinessOrgID = 1, ProductTypeCode = 'P', RequestedByUserID = '26may2017', SerialNumber = fulfilmentrequest['result']['parameters']['slno'], SymptomIDList = '0707')
+            response = client.service.Entitle(request = entitlementrequest)
+
+            warrantyexpirydate = response['Entitlement']['WarrantyExpiryDate']   
+            if datetime.now() < warrantyexpirydate:
+                chatresponse['displayText'] = "The phone is under warranty"
+                chatresponse['speech'] = "Your phone is under warranty"
+            else:
+                chatresponse['displayText'] = "The phone is not under warranty"
+                chatresponse['speech'] = "Your phone is not under warranty"
+        elif intentname == 'warranty_expiry_date':
+            client = Client('https://apiaiwebhookpassthough.herokuapp.com/static/content/EntitlementService.xml')    
+            requesttype = client.get_element('ns2:EntitlementRequest')
+            entitlementrequest = requesttype(BusinessOrgID = 1, ProductTypeCode = 'P', RequestedByUserID = '26may2017', SerialNumber = fulfilmentrequest['result']['parameters']['slno'], SymptomIDList = '0707')
+            response = client.service.Entitle(request = entitlementrequest)
+
+            warrantyexpirydate = response['Entitlement']['WarrantyExpiryDate']   
+            if datetime.now() < warrantyexpirydate:
+                chatresponse['displayText'] = "The warranty is valid till {}".format(warrantyexpirydate)
+                chatresponse['speech'] = "Your phone is under warranty till {}".format(warrantyexpirydate)
+            else:
+                chatresponse['displayText'] = "The phone is not under warranty"
+                chatresponse['speech'] = "Your phone is not under warranty"
+
+        elif intentname == 'warranty_valid_duration':
+            client = Client('https://apiaiwebhookpassthough.herokuapp.com/static/content/EntitlementService.xml')    
+            requesttype = client.get_element('ns2:EntitlementRequest')
+            entitlementrequest = requesttype(BusinessOrgID = 1, ProductTypeCode = 'P', RequestedByUserID = '26may2017', SerialNumber = fulfilmentrequest['result']['parameters']['slno'], SymptomIDList = '0707')
+            response = client.service.Entitle(request = entitlementrequest)
+
+            warrantyexpirydate = response['Entitlement']['WarrantyExpiryDate']   
+            if datetime.now() < warrantyexpirydate:
+                warrantyvaliddays = (warrantyexpirydate - datetime.today()).days
+                chatresponse['displayText'] = "The warranty is valid for next {} days".format(warrantyvaliddays)
+                chatresponse['speech'] = "Your phone is under warranty for {} days".format(warrantyvaliddays)
+            else:
+                chatresponse['displayText'] = "The phone is not under warranty"
+                chatresponse['speech'] = "Your phone is not under warranty"
+
+    except Exception as e:
         chatresponse['displayText'] = "Unable to find warranty details!  Please check the serial number and try again"
         chatresponse['speech'] = "Check the serial number and try again"
 
